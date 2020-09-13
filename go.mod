@@ -1,4 +1,4 @@
-module gitlab.com/jessal.va/go-file-server
+module github.com/jessalva/go-file-server
 
 go 1.15
 
