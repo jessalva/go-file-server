@@ -1,8 +1,4 @@
 package image
 
-
-type PNGImage struct{
-
+type PNGImage struct {
 }
-
-

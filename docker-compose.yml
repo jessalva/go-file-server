@@ -1,0 +1,13 @@
+version: '3'
+services:
+  go-file-server:
+    restart: always
+    ports:
+    - "8080:8080"
+    build:
+      dockerfile: Dockerfile
+      context: .
+    volumes:
+      - /tmp/data:/go/bin/resources/LFS/
+    environment:
+      - FILE_SERVER_BASE_PATH=./resources/LFS/

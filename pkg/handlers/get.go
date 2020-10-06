@@ -5,15 +5,14 @@ import (
 	"os"
 )
 
-type getHandler struct {}
+type getHandler struct{}
 
 func NewGetHandler() *getHandler {
 	return &getHandler{}
 }
 
+func (getHandler *getHandler) GetFile() http.Handler {
 
-func (getHandler *getHandler) GetFile() http.Handler{
-
-	return http.StripPrefix("/images/",http.FileServer( http.Dir(os.Getenv("FILE_SERVER_BASE_PATH")) ))
+	return http.StripPrefix("/images/", http.FileServer(http.Dir(os.Getenv("FILE_SERVER_BASE_PATH"))))
 
 }
