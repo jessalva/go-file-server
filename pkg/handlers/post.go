@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/jessalva/go-file-server/pkg/saving"
+	"github.com/opentracing/opentracing-go"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -11,22 +12,32 @@ import (
 
 type PostHandler struct {
 	savingService saving.Service
+	tracer        opentracing.Tracer
 }
 
-func NewPostHandler(savingService saving.Service) *PostHandler {
-	return &PostHandler{savingService: savingService}
+func NewPostHandler(savingService saving.Service, tracer opentracing.Tracer) *PostHandler {
+	opentracing.SetGlobalTracer(tracer)
+	return &PostHandler{savingService: savingService,
+		tracer: tracer}
 }
 
 func (ph *PostHandler) SaveFile() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		ctx := r.Context()
+		saveFileSpan, ctx := opentracing.StartSpanFromContextWithTracer(ctx, ph.tracer,"PostHandler::SaveFile")
+		defer saveFileSpan.Finish()
+
 		vars := mux.Vars(r)
 		filename := vars["filename"]
 		postId := vars["id"]
 
+		saveFileSpan.SetBaggageItem("filename", filename)
+		saveFileSpan.SetBaggageItem("postId", postId)
+
 		log.Print(filename + " " + postId)
-		err := ph.savingService.SaveFile(filename, postId, r.Body)
+		err := ph.savingService.SaveFile(ctx, filename, postId, r.Body)
 
 		if err != nil {
 
@@ -50,13 +61,20 @@ func (ph *PostHandler) SaveFileMultipart() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		ctx := r.Context()
+		saveFileSpan, ctx := opentracing.StartSpanFromContextWithTracer(ctx, ph.tracer,"PostHandler::SaveFile")
+		defer saveFileSpan.Finish()
 		postId, file, fileHeader, err, done := extractPostIdAndFile(w, r)
 		if done {
 			return
 		}
 
 		log.Print(fileHeader.Filename + " " + postId)
-		err = ph.savingService.SaveFile(fileHeader.Filename, postId, file)
+
+		saveFileSpan.SetBaggageItem("filename", fileHeader.Filename)
+		saveFileSpan.SetBaggageItem("postId", postId)
+
+		err = ph.savingService.SaveFile(ctx, fileHeader.Filename, postId, file)
 		if err != nil {
 
 			http.Error(w, err.Error(), http.StatusBadRequest)
